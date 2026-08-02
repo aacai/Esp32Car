@@ -1,0 +1,21 @@
+{
+  "configurations": [
+    {
+      "name": "ESP-IDF",
+      "compilerPath": "${env:IDF_TOOLS_PATH}/tools/riscv32-esp-elf/*/bin/riscv32-esp-elf-gcc",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "${env:IDF_PATH}/components/**",
+        "${env:IDF_PATH}/tools/**"
+      ],
+      "defines": [
+        "ESP_PLATFORM",
+        "IDF_VER=\"5.3.0\""
+      ],
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "gcc-x64"
+    }
+  ],
+  "version": 4
+}

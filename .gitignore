@@ -1,0 +1,19 @@
+# ESP-IDF 构建产物
+build/
+sdkconfig
+sdkconfig.old
+
+# Python
+__pycache__/
+*.pyc
+
+# 日志
+*.log
+debug.log
+
+# 调试
+.vscode/.browse.c_cpp.db*
+.spec-flow/
+.DS_Store
+
+tools/

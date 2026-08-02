@@ -1,0 +1,68 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "zsh -c 'export IDF_PATH=/Users/mac/esp/esp-idf; export IDF_PYTHON_ENV_PATH=\"$(ls -d /Users/mac/.espressif/python_env/*/ | head -1)\"; export IDF_PYTHON_ENV_PATH=${IDF_PYTHON_ENV_PATH%/}; export PATH=\"$IDF_PYTHON_ENV_PATH/bin:$PATH\"; . \"$IDF_PATH/export.sh\" >/dev/null 2>&1; \"$IDF_PYTHON_ENV_PATH/bin/python\" \"$IDF_PATH/tools/idf.py\" build'",
+      "options": {
+        "env": { "IDF_PATH": "/Users/mac/esp/esp-idf" },
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": ["$gcc"],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Flash",
+      "type": "shell",
+      "command": "zsh -c 'export IDF_PATH=/Users/mac/esp/esp-idf; export IDF_PYTHON_ENV_PATH=\"$(ls -d /Users/mac/.espressif/python_env/*/ | head -1)\"; export IDF_PYTHON_ENV_PATH=${IDF_PYTHON_ENV_PATH%/}; export PATH=\"$IDF_PYTHON_ENV_PATH/bin:$PATH\"; . \"$IDF_PATH/export.sh\" >/dev/null 2>&1; \"$IDF_PYTHON_ENV_PATH/bin/python\" \"$IDF_PATH/tools/idf.py\" flash'",
+      "options": {
+        "env": { "IDF_PATH": "/Users/mac/esp/esp-idf" },
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Monitor",
+      "type": "shell",
+      "command": "zsh -c 'export IDF_PATH=/Users/mac/esp/esp-idf; export IDF_PYTHON_ENV_PATH=\"$(ls -d /Users/mac/.espressif/python_env/*/ | head -1)\"; export IDF_PYTHON_ENV_PATH=${IDF_PYTHON_ENV_PATH%/}; export PATH=\"$IDF_PYTHON_ENV_PATH/bin:$PATH\"; . \"$IDF_PATH/export.sh\" >/dev/null 2>&1; \"$IDF_PYTHON_ENV_PATH/bin/python\" \"$IDF_PATH/tools/idf.py\" monitor'",
+      "options": {
+        "env": { "IDF_PATH": "/Users/mac/esp/esp-idf" },
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Build, Flash and Monitor",
+      "type": "shell",
+      "command": "zsh -c 'export IDF_PATH=/Users/mac/esp/esp-idf; export IDF_PYTHON_ENV_PATH=\"$(ls -d /Users/mac/.espressif/python_env/*/ | head -1)\"; export IDF_PYTHON_ENV_PATH=${IDF_PYTHON_ENV_PATH%/}; export PATH=\"$IDF_PYTHON_ENV_PATH/bin:$PATH\"; . \"$IDF_PATH/export.sh\" >/dev/null 2>&1; \"$IDF_PYTHON_ENV_PATH/bin/python\" \"$IDF_PATH/tools/idf.py\" flash monitor'",
+      "options": {
+        "env": { "IDF_PATH": "/Users/mac/esp/esp-idf" },
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Erase Flash",
+      "type": "shell",
+      "command": "zsh -c 'export IDF_PATH=/Users/mac/esp/esp-idf; export IDF_PYTHON_ENV_PATH=\"$(ls -d /Users/mac/.espressif/python_env/*/ | head -1)\"; export IDF_PYTHON_ENV_PATH=${IDF_PYTHON_ENV_PATH%/}; export PATH=\"$IDF_PYTHON_ENV_PATH/bin:$PATH\"; . \"$IDF_PATH/export.sh\" >/dev/null 2>&1; \"$IDF_PYTHON_ENV_PATH/bin/python\" \"$IDF_PATH/tools/idf.py\" erase-flash'",
+      "options": {
+        "env": { "IDF_PATH": "/Users/mac/esp/esp-idf" },
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Menuconfig",
+      "type": "shell",
+      "command": "zsh -c 'export IDF_PATH=/Users/mac/esp/esp-idf; export IDF_PYTHON_ENV_PATH=\"$(ls -d /Users/mac/.espressif/python_env/*/ | head -1)\"; export IDF_PYTHON_ENV_PATH=${IDF_PYTHON_ENV_PATH%/}; export PATH=\"$IDF_PYTHON_ENV_PATH/bin:$PATH\"; . \"$IDF_PATH/export.sh\" >/dev/null 2>&1; \"$IDF_PYTHON_ENV_PATH/bin/python\" \"$IDF_PATH/tools/idf.py\" menuconfig'",
+      "options": {
+        "env": { "IDF_PATH": "/Users/mac/esp/esp-idf" },
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

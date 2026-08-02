@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b1020">
+<title>小车遥控</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg-2: #121a33;
+    --card: rgba(255,255,255,.06);
+    --card-brd: rgba(255,255,255,.10);
+    --txt: #eaf0ff;
+    --muted: #9aa6c4;
+    --accent: #5b8cff;
+    --accent-2: #22d3ee;
+    --danger: #ff5d6c;
+    --ok: #34d399;
+    --shadow: 0 8px 24px rgba(0,0,0,.38);
+    --radius: 20px;
+    --tap: 76px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--txt);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(91,140,255,.18), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(34,211,238,.16), transparent 60%),
+      linear-gradient(160deg, var(--bg), var(--bg-2));
+    background-attachment: fixed;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .app {
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  /* 顶部品牌 + 状态 */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; letter-spacing: .3px; }
+  .brand .logo { width: 22px; height: 22px; color: var(--accent); flex: none; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 12px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--card-brd);
+    font-size: 13px; color: var(--muted);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #5b6478; transition: .3s; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 6px rgba(52,211,153,.7); }
+  .dot.warn { background: var(--danger); box-shadow: 0 0 6px rgba(255,93,108,.7); }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-brd);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 18px;
+  }
+
+  /* 方向键盘 */
+  .pad { display: grid; grid-template-columns: repeat(3, var(--tap)); grid-template-rows: repeat(3, var(--tap)); gap: 12px; justify-content: center; }
+  .pad-btn {
+    border: 1px solid var(--card-brd);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+    color: var(--txt);
+    display: grid; place-items: center;
+    cursor: pointer; user-select: none; touch-action: none;
+    transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .pad-btn svg { width: 38%; height: 38%; fill: currentColor; transition: transform .15s ease; }
+  .pad-btn svg.rot-left  { transform: rotate(-90deg); }
+  .pad-btn svg.rot-right { transform: rotate(90deg); }
+  .pad-btn svg.rot-down  { transform: rotate(180deg); }
+  .pad-btn:active, .pad-btn.active {
+    transform: scale(.93);
+    background: linear-gradient(180deg, var(--accent), #3f6fe0);
+    color: #fff; box-shadow: 0 0 16px rgba(91,140,255,.35);
+  }
+  .pad-btn.up    { grid-area: 1 / 2; }
+  .pad-btn.left  { grid-area: 2 / 1; }
+  .pad-btn.stop  { grid-area: 2 / 2; background: linear-gradient(180deg, rgba(255,93,108,.22), rgba(255,93,108,.08)); color: #ffd5d9; }
+  .pad-btn.stop:active { background: var(--danger); color: #fff; }
+  .pad-btn.right { grid-area: 2 / 3; }
+  .pad-btn.down  { grid-area: 3 / 2; }
+  .pad .stop svg { width: 42%; height: 42%; }
+  .hint { text-align: center; color: var(--muted); font-size: 12.5px; margin: 12px 0 0; }
+  .mode-switch { display: flex; gap: 8px; margin-top: 14px; }
+  .mode-btn {
+    flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--card-brd); background: var(--panel-2); color: var(--muted);
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .mode-btn.active {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(91,140,255,.35);
+  }
+
+  /* 控制区 */
+  .row { display: flex; align-items: center; gap: 12px; }
+  .row + .row { margin-top: 14px; }
+  .label { width: 64px; color: var(--muted); font-size: 14px; flex: none; }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; flex: 1; height: 6px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2)); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); cursor: pointer; transition: transform .1s;
+  }
+  input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.12); }
+  input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border: none; border-radius: 50%; background: #fff; cursor: pointer; }
+  .val { width: 52px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .text-in {
+    flex: 1; min-width: 0; padding: 11px 12px; border-radius: 12px;
+    border: 1px solid var(--card-brd); background: var(--field-bg); color: var(--txt); font-size: 14px;
+  }
+  .text-in::placeholder { color: var(--ph); }
+  .text-in:focus-visible, .pad-btn:focus-visible, .btn:focus-visible {
+    outline: 2px solid var(--accent-2); outline-offset: 2px;
+  }
+
+  /* 遥测 */
+  .telem h2 { font-size: 12px; margin: 0 0 12px; color: var(--muted); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+  .stat { background: var(--panel-2); border: 1px solid var(--card-brd); border-radius: 12px; padding: 10px 12px; }
+  .stat .k { font-size: 11.5px; color: var(--muted); }
+  .stat .v { font-size: 17px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .stat .v.ok { color: var(--ok); }
+  .stat .v.warn { color: var(--danger); }
+
+  .raw { display: flex; gap: 10px; margin-top: 14px; }
+  .btn {
+    border: 1px solid var(--card-brd); border-radius: 12px; padding: 0 16px; cursor: pointer;
+    background: var(--panel-2); color: var(--txt); font-size: 14px; transition: background .15s;
+  }
+  .btn:active { background: rgba(255,255,255,.14); }
+  .stop-btn {
+    width: 100%; margin-top: 12px; padding: 14px; border: none; border-radius: 14px; cursor: pointer;
+    font-size: 16px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #ff5d6c, #ff8a45);
+    box-shadow: 0 8px 18px rgba(255,93,108,.35); transition: transform .1s;
+  }
+  .stop-btn:active { transform: scale(.985); }
+  .log {
+    height: 168px; overflow-y: auto; margin-top: 12px; padding: 10px;
+    background: rgba(0,0,0,.32); border: 1px solid var(--card-brd); border-radius: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #c8d4e0;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .log .row { display: flex; gap: 8px; align-items: baseline; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
+  .log .ts  { color: #6b7a8d; flex: none; }
+  .log .tag { flex: none; font-weight: 700; padding: 0 6px; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+  .log .msg { flex: 1 1 auto; }
+  /* 分类配色 */
+  .log .t-info   { background: rgba(91,140,255,.18);  color: #9fb6ff; }
+  .log .t-ok     { background: rgba(80,220,150,.18);  color: #74e6a6; }
+  .log .t-ctrl   { background: rgba(255,196,84,.18);  color: #ffce7a; }
+  .log .t-warn   { background: rgba(255,150,90,.18);  color: #ffaf80; }
+  .log .t-err    { background: rgba(255,90,110,.20);  color: #ff9aa8; }
+  .log .t-net    { background: rgba(120,200,255,.16); color: #9fd4ff; }
+  .log .t-ble    { background: rgba(190,140,255,.18); color: #d2b0ff; }
+  .log .m-ok   { color: #74e6a6; }
+  .log .m-ctrl { color: #ffce7a; }
+  .log .m-warn { color: #ffaf80; }
+  .log .m-err  { color: #ff9aa8; }
+  .sub { font-size:12px; margin:18px 0 8px; color:var(--muted); font-weight:600; letter-spacing:.1em; text-transform:uppercase; opacity:1; }
+
+  /* 固件在线升级（OTA） */
+  .ota-note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; line-height: 1.5; }
+  .ota-file { color: var(--txt); }
+  .ota-file::file-selector-button {
+    margin-right: 10px; padding: 8px 12px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--card-brd); background: var(--panel-2); color: var(--txt); font-size: 13px;
+  }
+  .ota-bar { height: 8px; border-radius: 999px; background: rgba(0,0,0,.32); overflow: hidden; margin-top: 12px; }
+  .ota-bar-in { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
+  .ota-status { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 18px; }
+  .ota-status.err { color: var(--danger); }
+  .ota-status.ok  { color: var(--ok); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+  /* 顶栏操作按钮：语言 / 主题切换 */
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+    display: grid; place-items: center; padding: 0;
+    border: 1px solid var(--card-brd); background: var(--card); color: var(--txt);
+    font-size: 14px; font-weight: 700; transition: background .15s, transform .1s;
+  }
+  .icon-btn:active { transform: scale(.94); }
+  .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* 主题相关变量（深色为默认） */
+  :root {
+    --field-bg: rgba(0,0,0,.25);
+    --log-bg: rgba(0,0,0,.32);
+    --log-txt: #c8d4e0;
+    --log-ts: #6b7a8d;
+    --panel-2: rgba(255,255,255,.04);
+    --ph: #6b779a;
+  }
+  [data-theme="light"] {
+    --bg: #eef2f9;
+    --bg-2: #dde6f4;
+    --card: rgba(255,255,255,.72);
+    --card-brd: rgba(15,23,42,.14);
+    --txt: #14233f;
+    --muted: #5a6b86;
+    --accent: #3b6cf6;
+    --accent-2: #0891b2;
+    --danger: #e11d48;
+    --ok: #059669;
+    --shadow: 0 8px 24px rgba(20,40,80,.14);
+    --field-bg: rgba(15,23,42,.06);
+    --log-bg: rgba(15,23,42,.05);
+    --log-txt: #33415a;
+    --log-ts: #7e8aa0;
+    --panel-2: rgba(15,23,42,.05);
+    --ph: #8a96ad;
+  }
+
+  @media (max-width: 360px) { :root { --tap: 68px; } }
+</style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar">
+      <div class="brand"><svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14l1.5-4.5A2 2 0 0 1 7.4 8h9.2a2 2 0 0 1 1.9 1.5L20 14v4a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-1v-1H7.2v1a1 1 0 0 1-1 1H4.8a1 1 0 0 1-1-1z"/><circle cx="7.5" cy="15" r="1"/><circle cx="16.5" cy="15" r="1"/></svg><span data-i18n="brand">ESP32-C3 小车</span></div>
+      <div class="top-actions">
+        <div class="pill"><span class="dot" id="modeDot"></span><span id="modeTxt" data-i18n="st_disconnected">未连接</span></div>
+        <button class="icon-btn" id="langToggle" aria-label="Switch language" title="Language">中</button>
+        <button class="icon-btn" id="themeToggle" aria-label="Switch theme" title="Theme"><span id="themeIcon"></span></button>
+      </div>
+    </div>
+
+    <section class="card" data-i18n-aria="aria_dir" aria-label="方向控制">
+      <div class="pad" role="group" aria-label="方向键盘">
+        <button class="pad-btn up"   data-c="F" data-i18n-aria="aria_fwd"  aria-label="前进"><svg viewBox="0 0 24 24"><path d="M12 4 L21 17 H3 Z"/></svg></button>
+        <button class="pad-btn left" data-c="L" data-i18n-aria="aria_left" aria-label="左转"><svg viewBox="0 0 24 24" class="rot-left"><path d="M12 4 L21 17 H3 Z"/></svg></button>
+        <button class="pad-btn stop" data-c="S" data-i18n-aria="aria_stop" aria-label="停止"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+        <button class="pad-btn right" data-c="R" data-i18n-aria="aria_right" aria-label="右转"><svg viewBox="0 0 24 24" class="rot-right"><path d="M12 4 L21 17 H3 Z"/></svg></button>
+        <button class="pad-btn down" data-c="B" data-i18n-aria="aria_back" aria-label="后退"><svg viewBox="0 0 24 24" class="rot-down"><path d="M12 4 L21 17 H3 Z"/></svg></button>
+      </div>
+      <p class="hint" id="padHint" data-i18n="hint_hold">按住方向键移动，松手即停 · 也可用键盘方向键 / 空格</p>
+      <div class="mode-switch" role="group" aria-label="控制模式">
+        <button class="mode-btn active" id="mHold" aria-pressed="true" data-i18n="mode_hold">按住模式</button>
+        <button class="mode-btn" id="mToggle" aria-pressed="false" data-i18n="mode_toggle">点动模式</button>
+      </div>
+    </section>
+
+    <section class="card" data-i18n-aria="aria_set" aria-label="设置">
+      <div class="row">
+        <span class="label" data-i18n="speed">速度</span>
+        <input id="spd" type="range" min="0" max="9" value="6" data-i18n-aria="aria_spd" aria-label="速度 0% 到 90%">
+        <span class="val" id="spdv">60%</span>
+      </div>
+    </section>
+
+    <section class="card telem" data-i18n-aria="aria_telem" aria-label="遥测">
+      <h2 data-i18n="status_title">实时状态</h2>
+      <div class="grid">
+        <div class="stat"><div class="k" data-i18n="k_action">当前动作</div><div class="v" id="d_act">—</div></div>
+        <div class="stat"><div class="k" data-i18n="k_uptime">运行时间</div><div class="v" id="d_up">—</div></div>
+        <div class="stat"><div class="k" data-i18n="k_heap">空闲内存</div><div class="v" id="d_heap">—</div></div>
+        <div class="stat"><div class="k" data-i18n="k_count">指令计数</div><div class="v" id="d_cnt">—</div></div>
+        <div class="stat"><div class="k" data-i18n="k_ble">蓝牙状态</div><div class="v" id="d_ble">未连接</div></div>
+        <div class="stat"><div class="k" data-i18n="k_bleadv">BLE 广播</div><div class="v" id="d_bleadv">—</div></div>
+      </div>
+      <div class="raw">
+        <input id="raw" class="text-in" data-i18n-ph="raw_ph" placeholder="发原始指令，如 F L R S 或 5" aria-label="原始指令">
+        <button class="btn" id="rawBtn" data-i18n="send">发送</button>
+      </div>
+      <button id="stopBtn" class="stop-btn" data-i18n="stop_all">一键全停</button>
+      <h3 class="sub" data-i18n="log_title">网页端操作日志</h3>
+      <div id="log" class="log" aria-live="polite"></div>
+    </section>
+
+    <section class="card ota" aria-label="固件升级">
+      <h2 data-i18n="ota_title">固件升级（OTA）</h2>
+      <p class="ota-note" data-i18n="ota_note">选择编译好的固件 .bin 上传，设备将在线升级并自动重启。升级失败可用串口重刷救回。</p>
+      <div class="row" style="margin-top:12px">
+        <input id="otaFile" class="text-in ota-file" type="file" accept=".bin" aria-label="选择固件文件">
+        <button class="btn" id="otaUp" data-i18n="ota_up">上传升级</button>
+      </div>
+      <div class="ota-bar"><div class="ota-bar-in" id="otaBar"></div></div>
+      <div class="ota-status" id="otaStatus" aria-live="polite"></div>
+    </section>
+  </main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const spd = $('spd'), spdv = $('spdv');
+  const modeDot = $('modeDot'), modeTxt = $('modeTxt');
+  /* ---------- 语言 & 主题 ---------- */
+  /* 日志保持中文，不翻译；仅界面文案走 i18n */
+  let lang  = localStorage.getItem('car_lang')  || 'zh';
+  let theme = localStorage.getItem('car_theme') || 'dark';
+
+  const I18N = {
+    zh: {
+      brand:'ESP32-C3 小车', st_disconnected:'未连接',
+      hint_hold:'按住方向键移动，松手即停 · 也可用键盘方向键 / 空格',
+      hint_toggle:'点一下方向键持续行进，再点一次停止（传统锁存模式）· 空格停止',
+      mode_hold:'按住模式', mode_toggle:'点动模式',
+      speed:'速度', status_title:'实时状态',
+      k_action:'当前动作', k_uptime:'运行时间', k_heap:'空闲内存', k_count:'指令计数',
+      k_ble:'蓝牙状态', k_bleadv:'BLE 广播',
+      raw_ph:'发原始指令，如 F L R S 或 5', send:'发送', stop_all:'一键全停',
+      log_title:'网页端操作日志',
+      ota_title:'固件升级（OTA）', ota_note:'选择编译好的固件 .bin 上传，设备将在线升级并自动重启。升级失败可用串口重刷救回。', ota_up:'上传升级',
+      aria_dir:'方向控制', aria_set:'设置', aria_telem:'遥测',
+      aria_fwd:'前进', aria_left:'左转', aria_stop:'停止', aria_right:'右转', aria_back:'后退', aria_spd:'速度 0% 到 90%',
+      mode_ble:'蓝牙', mode_wifi:'WiFi', mode_off:'离线', mode_none:'未连接',
+      ble_local:'本机已连', ble_conn:'已连接', ble_none:'未连接', ble_off:'离线',
+      adv_on:'广播中', adv_fail:'失败(%s)', adv_off:'未启动',
+      title_base:'ESP32-C3 小车遥控', title_off:'离线 · ESP32-C3 小车遥控',
+      lang_btn:'EN'
+    },
+    en: {
+      brand:'ESP32-C3 Car', st_disconnected:'Disconnected',
+      hint_hold:'Hold a direction to move, release to stop · arrow keys / space also work',
+      hint_toggle:'Tap a direction to keep moving, tap again to stop (latch mode) · space to stop',
+      mode_hold:'Hold mode', mode_toggle:'Toggle mode',
+      speed:'Speed', status_title:'Live status',
+      k_action:'Action', k_uptime:'Uptime', k_heap:'Free heap', k_count:'Cmd count',
+      k_ble:'Bluetooth', k_bleadv:'BLE adv',
+      raw_ph:'Raw cmd, e.g. F L R S or 5', send:'Send', stop_all:'Emergency stop',
+      log_title:'Web operation log',
+      ota_title:'Firmware Update', ota_note:'Pick a compiled .bin firmware to flash over-the-air. The device reboots after update. If it fails, reflash via serial.', ota_up:'Upload & Update',
+      aria_dir:'Direction control', aria_set:'Settings', aria_telem:'Telemetry',
+      aria_fwd:'Forward', aria_left:'Turn left', aria_stop:'Stop', aria_right:'Turn right', aria_back:'Backward', aria_spd:'Speed 0% to 90%',
+      mode_ble:'BLE', mode_wifi:'WiFi', mode_off:'Offline', mode_none:'Disconnected',
+      ble_local:'This device', ble_conn:'Connected', ble_none:'Disconnected', ble_off:'Offline',
+      adv_on:'Advertising', adv_fail:'Failed (%s)', adv_off:'Not started',
+      title_base:'ESP32-C3 Car Remote', title_off:'Offline · ESP32-C3 Car Remote',
+      lang_btn:'中'
+    }
+  };
+  function tr(k, ...a){
+    let s = (I18N[lang] && I18N[lang][k] != null) ? I18N[lang][k] : I18N.zh[k];
+    if (s == null) s = k;
+    a.forEach(v => { s = s.replace('%s', v); });
+    return s;
+  }
+  /* 固件返回的中文动作名 → 英文（中文环境原样返回） */
+  const ACTION_EN = { '停止':'Stop','前进':'Forward','后退':'Backward','左转':'Left','右转':'Right' };
+  function actionText(a){
+    if (lang === 'en' && a && ACTION_EN[a]) return ACTION_EN[a];
+    return a || '—';
+  }
+  function applyTheme(){
+    document.documentElement.setAttribute('data-theme', theme);
+    const meta = document.querySelector('meta[name=theme-color]');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#eef2f9' : '#0b1020');
+    const ti = $('themeIcon');
+    if (ti) ti.innerHTML = theme === 'light'
+      ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>'
+      : '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  }
+  /* ---------- 固件在线升级（OTA） ----------
+     选 .bin 文件 → 二次确认 → 以原始二进制 POST 到 /update，XHR 可显示上传进度。 */
+  const otaBar = $('otaBar'), otaStatus = $('otaStatus');
+  function setOtaStatus(text, cls) {
+    otaStatus.textContent = text;
+    otaStatus.className = 'ota-status' + (cls ? ' ' + cls : '');
+  }
+  function doOta() {
+    const f = $('otaFile').files[0];
+    if (!f) { log('请先选择固件 .bin 文件', 'warn'); return; }
+    if (!/\.bin$/i.test(f.name)) { log('只支持 .bin 固件文件', 'warn'); return; }
+    const base = apiBase();
+    if (!base) { log('请通过小车热点或局域网地址打开本页再升级', 'err'); return; }
+    const sure = (lang === 'zh')
+      ? '确定上传固件并重启升级？\n请确保文件正确，升级期间小车会短暂失联。'
+      : 'Upload firmware and reboot now?\nMake sure the file is correct; the car will briefly go offline.';
+    if (!confirm(sure)) return;
+
+    setOtaStatus(lang === 'zh' ? '准备上传…' : 'Preparing…', '');
+    otaBar.style.width = '0%';
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', base + '/update');
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const p = Math.round(e.loaded / e.total * 100);
+        otaBar.style.width = p + '%';
+        setOtaStatus((lang === 'zh' ? '上传中 ' : 'Uploading ') + p + '%', '');
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        otaBar.style.width = '100%';
+        setOtaStatus(lang === 'zh' ? '升级成功，设备重启中…' : 'Update OK, rebooting…', 'ok');
+        log('固件上传完成，设备即将重启', 'ok');
+      } else {
+        setOtaStatus((lang === 'zh' ? '升级失败 HTTP ' : 'Failed HTTP ') + xhr.status, 'err');
+        log('固件升级失败：HTTP ' + xhr.status, 'err');
+      }
+    };
+    xhr.onerror = () => {
+      setOtaStatus(lang === 'zh' ? '网络错误，升级未完成' : 'Network error', 'err');
+      log('OTA 网络错误', 'err');
+    };
+    xhr.send(f);
+  }
+  $('otaUp').addEventListener('click', doOta);
+
+  const langToggle = $('langToggle'), themeToggle = $('themeToggle');
+  function setOnlineTitle(on) { document.title = on ? tr('title_base') : tr('title_off'); }
+  function applyLang(){
+    document.documentElement.lang = (lang === 'zh') ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', tr(el.dataset.i18nAria)); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.setAttribute('placeholder', tr(el.dataset.i18nPh)); });
+    if (langToggle) langToggle.textContent = tr('lang_btn');
+    setOnlineTitle(lastNetState === 'ok');
+    setCtrlMode(ctrlMode);
+    setMode();
+  }
+  const bleNote = $('bleNote'), bleBtn = $('ble');
+  let bleChar = null, useBLE = false;
+  const BLE_PREFIX = 'EspCar_';   // 必须与固件 ble_car.c 中广播名前缀一致（后接唯一硬件 ID）
+
+  /* 地址直接取当前页面来源（小车自身 HTTP 提供时即为 192.168.4.1 / 局域网 IP）；
+     本地 file:// 打开没有来源地址，需用蓝牙控制。 */
+  function apiBase() {
+    if (location.protocol === 'file:' || !location.host) return null;
+    return location.origin;
+  }
+  function setMode() {
+    if (useBLE && bleChar) { modeDot.className = 'dot on'; modeTxt.textContent = tr('mode_ble'); }
+    else if (apiBase() && lastNetState === 'ok') { modeDot.className = 'dot on'; modeTxt.textContent = tr('mode_wifi'); }
+    else if (lastNetState === 'off') { modeDot.className = 'dot warn'; modeTxt.textContent = tr('mode_off'); }
+    else                   { modeDot.className = 'dot warn'; modeTxt.textContent = tr('mode_none'); }
+  }
+  /* 日志：自动按内容归类（连接/蓝牙/控制/错误），带时间戳与彩色标签 */
+  function classify(text, force) {
+    const t = text.toLowerCase();
+    if (force) return force;
+    if (/错误|失败|出错|异常|无法|不能|refused|error|fail|denied/.test(t)) return 'err';
+    if (/蓝牙|ble/.test(t)) return 'ble';
+    if (/wifi|网络|http|连接|已连|离线|ip|host/.test(t)) return 'net';
+    if (/^控制|指令|停止|前进|后退|左转|右转|模式/.test(t)) return 'ctrl';
+    if (/成功|已连|已发送|完成|就绪|启动/.test(t)) return 'ok';
+    if (/未连接|超时|断开|警告|注意/.test(t)) return 'warn';
+    return 'info';
+  }
+  const TAG_TXT = { info: '信息', ok: '成功', ctrl: '控制', warn: '警告', err: '错误', net: '网络', ble: '蓝牙' };
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function log(text, force) {
+    const level = classify(text, force);
+    const ts = new Date().toTimeString().slice(0, 8);
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span class="ts">${ts}</span>` +
+                    `<span class="tag t-${level}">${TAG_TXT[level]}</span>` +
+                    `<span class="msg m-${level}"></span>`;
+    row.querySelector('.msg').textContent = text;
+    const box = $('log');
+    box.prepend(row);
+    while (box.childElementCount > 200) box.lastChild.remove();
+  }
+  function showBleNote(msg) { if (bleNote) { bleNote.textContent = msg; bleNote.classList.add('show'); } }
+  function clearBleNote() { if (bleNote) bleNote.classList.remove('show'); }
+
+  const CMD_TXT = { F: '前进', B: '后退', L: '左转', R: '右转', S: '停止' };
+  function send(c) {
+    const what = CMD_TXT[c] || ('指令 ' + c);
+    if (useBLE && bleChar) {
+      bleChar.writeValue(new TextEncoder().encode(c))
+        .then(() => log('蓝牙发送 ' + what, 'ctrl'))
+        .catch(e => log('蓝牙发送失败 ' + what + '：' + e, 'err'));
+      return;
+    }
+    const base = apiBase();
+    if (!base) { log('本页没有可用地址，请通过小车热点或局域网地址打开本页。', 'err'); return; }
+    clearBleNote();
+    log('WiFi 发送 ' + what, 'ctrl');
+    fetch(base + '/api?c=' + c).catch(() => log('WiFi 发送失败（地址是否正确？）', 'err'));
+  }
+
+  /* 速度 */
+  spd.addEventListener('input', () => {
+    spdv.textContent = (spd.value * 10) + '%';
+    send(spd.value);
+  });
+
+  /* 控制模式：hold = 按住移动松手停；toggle = 点一下持续、再点一下停（传统锁存） */
+  let ctrlMode = 'hold';          // 'hold' | 'toggle'
+  let movingCmd = null;           // 点动模式下当前在走的指令
+
+  function setCtrlMode(m) {
+    ctrlMode = m;
+    $('mHold').classList.toggle('active', m === 'hold');
+    $('mHold').setAttribute('aria-pressed', m === 'hold');
+    $('mToggle').classList.toggle('active', m === 'toggle');
+    $('mToggle').setAttribute('aria-pressed', m === 'toggle');
+    $('padHint').textContent = m === 'hold' ? tr('hint_hold') : tr('hint_toggle');
+  }
+  $('mHold').addEventListener('click', () => setCtrlMode('hold'));
+  $('mToggle').addEventListener('click', () => setCtrlMode('toggle'));
+
+  function stopCar() { movingCmd = null; document.querySelectorAll('.pad-btn').forEach(b => b.classList.remove('active')); send('S'); }
+  function markBtn(c){ const b = document.querySelector(`.pad-btn[data-c="${c}"]`); if (b) b.classList.add('active'); }
+  function unmarkBtn(c){ const b = document.querySelector(`.pad-btn[data-c="${c}"]`); if (b) b.classList.remove('active'); }
+
+  /* 方向键 */
+  document.querySelectorAll('.pad-btn[data-c]').forEach(b => {
+    const c = b.dataset.c;
+    if (c === 'S') { b.addEventListener('click', stopCar); return; }
+    if (ctrlMode === 'hold') {
+      const press = e => { e.preventDefault(); b.classList.add('active'); send(c); };
+      const release = () => { b.classList.remove('active'); send('S'); };
+      b.addEventListener('pointerdown', press);
+      b.addEventListener('pointerup', release);
+      b.addEventListener('pointerleave', release);
+      b.addEventListener('pointercancel', release);
+    } else {
+      b.addEventListener('click', e => {
+        e.preventDefault();
+        if (movingCmd === c) { stopCar(); }       // 再点同方向 → 停
+        else { stopCar(); movingCmd = c; markBtn(c); send(c); }  // 切方向：先停旧的再发新的
+      });
+    }
+  });
+
+  /* 键盘控制 */
+  const keyMap = { ArrowUp: 'F', ArrowDown: 'B', ArrowLeft: 'L', ArrowRight: 'R' };
+  document.addEventListener('keydown', e => {
+    if (e.repeat) return;
+    if (keyMap[e.key]) {
+      e.preventDefault();
+      if (ctrlMode === 'hold') { send(keyMap[e.key]); markBtn(keyMap[e.key]); }
+      else { const c = keyMap[e.key]; if (movingCmd === c) stopCar(); else { stopCar(); movingCmd = c; markBtn(c); send(c); } }
+    } else if (e.key === ' ') { e.preventDefault(); stopCar(); }
+  });
+  document.addEventListener('keyup', e => {
+    if (keyMap[e.key] && ctrlMode === 'hold') { e.preventDefault(); send('S'); unmarkBtn(keyMap[e.key]); }
+  });
+
+  /* 原始指令框 */
+  function sendRaw() {
+    const s = $('raw').value.trim();
+    if (!s) return;
+    for (const ch of s) send(ch);
+    $('raw').value = '';
+  }
+  $('rawBtn').addEventListener('click', sendRaw);
+  $('raw').addEventListener('keydown', e => { if (e.key === 'Enter') sendRaw(); });
+
+  $('stopBtn').addEventListener('click', () => { send('S'); log('已发送全停', 'ctrl'); });
+
+  /* 状态轮询 */
+  let lastNetState = null;   // 'ok' | 'off' | null，用于日志仅在有变化时打印
+  function pollStatus() {
+    const base = apiBase();
+    if (!base) { if (lastNetState !== 'off') { lastNetState = 'off'; } return; }
+    fetch(base + '/status').then(r => r.json()).then(d => {
+      $('d_up').textContent   = (d.uptime != null) ? d.uptime + 's' : '—';
+      $('d_heap').textContent = (d.free_heap != null) ? (d.free_heap / 1024).toFixed(1) + ' KB' : '—';
+      $('d_act').textContent  = actionText(d.action);
+      $('d_cnt').textContent  = (d.cmd_count != null) ? d.cmd_count : '—';
+      const b = $('d_ble');
+      if (useBLE && bleChar) { b.innerHTML = '<span class="dot on"></span>' + tr('ble_local'); b.className = 'v ok'; }
+      else if (d.ble)        { b.innerHTML = '<span class="dot on"></span>' + tr('ble_conn'); b.className = 'v ok'; }
+      else                   { b.innerHTML = '<span class="dot"></span>' + tr('ble_none'); b.className = 'v warn'; }
+      const adv = $('d_bleadv');
+      if (d.ble_adv === 0)      { adv.innerHTML = '<span class="dot on"></span>' + tr('adv_on'); adv.className = 'v ok'; }
+      else if (d.ble_adv > 0)  { adv.innerHTML = '<span class="dot"></span>' + tr('adv_fail', d.ble_adv); adv.className = 'v err'; }
+      else                      { adv.innerHTML = '<span class="dot warn"></span>' + tr('adv_off'); adv.className = 'v warn'; }
+      if (lastNetState !== 'ok') { lastNetState = 'ok'; log('WiFi 已连接小车（' + (d.ip || base) + '）', 'net'); }
+      setOnlineTitle(true);
+      setMode();
+    }).catch(() => {
+      $('d_ble').innerHTML = '<span class="dot"></span>离线'; $('d_ble').className = 'v warn';
+      if (lastNetState !== 'off') { lastNetState = 'off'; log('WiFi 连接失败 / 小车离线（地址是否正确？）', 'err'); }
+      setOnlineTitle(false);
+      setMode();
+    });
+  }
+
+  setMode();
+  setInterval(pollStatus, 1000);
+  pollStatus();
+
+  /* 顶栏：语言 / 主题切换 */
+  langToggle.addEventListener('click', () => {
+    lang = (lang === 'zh') ? 'en' : 'zh';
+    localStorage.setItem('car_lang', lang);
+    applyLang();
+  });
+  themeToggle.addEventListener('click', () => {
+    theme = (theme === 'light') ? 'dark' : 'light';
+    localStorage.setItem('car_theme', theme);
+    applyTheme();
+  });
+  applyTheme();
+  applyLang();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "idf.openOcdConfigs": ["board/esp32c3-builtin.cfg"],
+  "idf.monitorBaudRate": "115200",
+  "idf.flashType": "uart",
+  "idf.adapterTargetName": "esp32c3",
+  "files.associations": {
+    "*.h": "c",
+    "*.c": "c"
+  }
+}

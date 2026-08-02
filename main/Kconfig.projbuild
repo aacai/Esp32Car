@@ -1,0 +1,37 @@
+menu "Car Configuration"
+
+    config ENABLE_BLE
+        bool "Enable Bluetooth LE control (ESP32-C3 仅支持 BLE)"
+        default y
+
+    config EXAMPLE_WIFI_SSID
+        string "WiFi SSID"
+        default "ImmortalWrt-2.4G"
+    config EXAMPLE_WIFI_PASSWORD
+        string "WiFi Password"
+        default "3355260463"
+
+    menu "Motor (L298N) GPIO"
+        config MOTOR_IN1_GPIO
+            int "IN1 (left dir +)"
+            default 1
+        config MOTOR_IN2_GPIO
+            int "IN2 (left dir -)"
+            default 3
+        config MOTOR_IN3_GPIO
+            int "IN3 (right dir +)"
+            default 4
+        config MOTOR_IN4_GPIO
+            int "IN4 (right dir -)"
+            default 5
+        config MOTOR_ENA_GPIO
+            int "ENA (left PWM speed)"
+            default 2
+            help "禁止设为 18/19，那是 ESP32-C3 的 USB D-/D+ 引脚"
+        config MOTOR_ENB_GPIO
+            int "ENB (right PWM speed)"
+            default 10
+            help "禁止设为 18/19，那是 ESP32-C3 的 USB D-/D+ 引脚"
+    endmenu
+
+endmenu

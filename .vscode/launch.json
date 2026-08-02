@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ESP-IDF Debug",
+      "type": "espidf",
+      "request": "launch",
+      "debugPort": 43474,
+      "logFile": "${workspaceFolder}/debug.log",
+      "openOcdDebugLevel": 0,
+      "filterGdbMonitorOutput": false,
+      "svdFile": "${env:IDF_PATH}/components/esp32c3/include/svd/esp32c3.svd",
+      "toolchainPrefix": "riscv32-esp-elf",
+      "gdbinitFile": "${workspaceFolder}/gdbinit",
+      "postStartSessionCommands": []
+    }
+  ]
+}
