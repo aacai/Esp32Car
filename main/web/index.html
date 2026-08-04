@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0b1020">
 <title>小车遥控</title>
 <style>
@@ -22,7 +22,8 @@
     --tap: 76px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  html { scroll-behavior: smooth; }
+  html, body { height: 100%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -36,6 +37,8 @@
     display: flex;
     justify-content: center;
     padding: max(16px, env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
   .app {
     width: 100%;
@@ -66,6 +69,7 @@
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     padding: 18px;
+    scroll-margin-top: 16px;
   }
 
   /* 方向键盘 */
@@ -76,9 +80,12 @@
     background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
     color: var(--txt);
     display: grid; place-items: center;
-    cursor: pointer; user-select: none; touch-action: none;
+    cursor: pointer; user-select: none; touch-action: manipulation;
     transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    min-height: 44px;
+    min-width: 44px;
+    will-change: transform;
   }
   .pad-btn svg { width: 38%; height: 38%; fill: currentColor; transition: transform .15s ease; }
   .pad-btn svg.rot-left  { transform: rotate(-90deg); }
@@ -91,8 +98,8 @@
   }
   .pad-btn.up    { grid-area: 1 / 2; }
   .pad-btn.left  { grid-area: 2 / 1; }
-  .pad-btn.stop  { grid-area: 2 / 2; background: linear-gradient(180deg, rgba(255,93,108,.22), rgba(255,93,108,.08)); color: #ffd5d9; }
-  .pad-btn.stop:active { background: var(--danger); color: #fff; }
+  .pad-btn.stop  { grid-area: 2 / 2; background: var(--danger); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+  .pad-btn.stop:active { filter: brightness(1.15); }
   .pad-btn.right { grid-area: 2 / 3; }
   .pad-btn.down  { grid-area: 3 / 2; }
   .pad .stop svg { width: 42%; height: 42%; }
@@ -102,9 +109,12 @@
     flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600;
     border: 1px solid var(--card-brd); background: var(--panel-2); color: var(--muted);
     transition: background .15s, color .15s, border-color .15s;
+    touch-action: manipulation;
+    min-height: 44px;
   }
+  .mode-btn:focus { outline: none; }
   .mode-btn.active {
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    background: var(--accent);
     color: #fff; border-color: transparent; box-shadow: 0 6px 16px rgba(91,140,255,.35);
   }
 
@@ -127,9 +137,12 @@
   .text-in {
     flex: 1; min-width: 0; padding: 11px 12px; border-radius: 12px;
     border: 1px solid var(--card-brd); background: var(--field-bg); color: var(--txt); font-size: 14px;
+    min-height: 44px;
   }
   .text-in::placeholder { color: var(--ph); }
-  .text-in:focus-visible, .pad-btn:focus-visible, .btn:focus-visible {
+  .text-in:focus-visible, .pad-btn:focus-visible, .btn:focus-visible,
+  .ota-upload-btn:focus-visible, .icon-btn:focus-visible,
+  .ota-file-label:focus-visible {
     outline: 2px solid var(--accent-2); outline-offset: 2px;
   }
 
@@ -146,12 +159,14 @@
   .btn {
     border: 1px solid var(--card-brd); border-radius: 12px; padding: 0 16px; cursor: pointer;
     background: var(--panel-2); color: var(--txt); font-size: 14px; transition: background .15s;
+    touch-action: manipulation; min-height: 44px;
   }
   .btn:active { background: rgba(255,255,255,.14); }
   .stop-btn {
     width: 100%; margin-top: 12px; padding: 14px; border: none; border-radius: 14px; cursor: pointer;
     font-size: 16px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #ff5d6c, #ff8a45);
     box-shadow: 0 8px 18px rgba(255,93,108,.35); transition: transform .1s;
+    touch-action: manipulation; min-height: 48px;
   }
   .stop-btn:active { transform: scale(.985); }
   .log {
@@ -159,6 +174,8 @@
     background: rgba(0,0,0,.32); border: 1px solid var(--card-brd); border-radius: 12px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #c8d4e0;
     display: flex; flex-direction: column; gap: 3px;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
   }
   .log .row { display: flex; gap: 8px; align-items: baseline; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
   .log .ts  { color: #6b7a8d; flex: none; }
@@ -180,16 +197,41 @@
 
   /* 固件在线升级（OTA） */
   .ota-note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; line-height: 1.5; }
-  .ota-file { color: var(--txt); }
-  .ota-file::file-selector-button {
-    margin-right: 10px; padding: 8px 12px; border-radius: 10px; cursor: pointer;
-    border: 1px solid var(--card-brd); background: var(--panel-2); color: var(--txt); font-size: 13px;
+  .ota-form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .ota-file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ota-file-label {
+    flex: none; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--card-brd); background: var(--panel-2); color: var(--txt);
+    font-size: 14px; font-weight: 600; min-height: 44px;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s, border-color .15s;
   }
+  .ota-file-label:hover { background: rgba(255,255,255,.08); border-color: var(--accent); }
+  .ota-file-label:active { transform: scale(.97); }
+  .ota-file-input {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  .ota-file-name {
+    flex: 1; min-width: 0; font-size: 13px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ota-upload-btn {
+    width: 100%; padding: 14px; border: none; border-radius: 14px; cursor: pointer;
+    font-size: 16px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 16px rgba(91,140,255,.3);
+    transition: opacity .15s, transform .1s;
+    min-height: 48px;
+  }
+  .ota-upload-btn:active:not(:disabled) { transform: scale(.98); }
+  .ota-upload-btn:disabled { opacity: .4; cursor: not-allowed; }
   .ota-bar { height: 8px; border-radius: 999px; background: rgba(0,0,0,.32); overflow: hidden; margin-top: 12px; }
   .ota-bar-in { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
   .ota-status { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 18px; }
   .ota-status.err { color: var(--danger); }
   .ota-status.ok  { color: var(--ok); }
+  .ota-status.uploading { color: var(--accent); }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
@@ -197,10 +239,11 @@
   /* 顶栏操作按钮：语言 / 主题切换 */
   .top-actions { display: flex; align-items: center; gap: 8px; }
   .icon-btn {
-    width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+    width: 44px; height: 44px; border-radius: 12px; cursor: pointer;
     display: grid; place-items: center; padding: 0;
     border: 1px solid var(--card-brd); background: var(--card); color: var(--txt);
     font-size: 14px; font-weight: 700; transition: background .15s, transform .1s;
+    touch-action: manipulation;
   }
   .icon-btn:active { transform: scale(.94); }
   .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -233,8 +276,58 @@
     --panel-2: rgba(15,23,42,.05);
     --ph: #8a96ad;
   }
+  /* 粉色主题 · 中国传统色（樱粉 #F7B7C5 等） */
+  [data-theme="pink"] {
+    --bg: oklch(0.955 0.026 18);          /* 浅樱白底（色相偏粉） */
+    --bg-2: oklch(0.93 0.045 16);         /* 暖粉渐变 */
+    --card: oklch(0.985 0.012 15);        /* 棉花糖白 */
+    --card-brd: oklch(0.86 0.03 15 / .55);
+    --txt: oklch(0.221 0.041 10.9);       /* 李紫 */
+    --muted: oklch(0.487 0.038 6.6);      /* 鼠背灰 */
+    --accent: oklch(0.842 0.076 4.3);     /* 樱粉 */
+    --accent-2: oklch(0.633 0.119 172.2); /* 蓝绿 */
+    --danger: oklch(0.636 0.224 34.4);    /* 银朱 */
+    --ok: oklch(0.843 0.073 136.4);       /* 松花 */
+    --shadow: 0 8px 24px oklch(0.55 0.06 15 / .16);
+    --field-bg: oklch(0.221 0.041 10.9 / .05);
+    --log-bg: oklch(0.221 0.041 10.9 / .04);
+    --log-txt: oklch(0.30 0.04 10);
+    --log-ts: oklch(0.56 0.04 10);
+    --panel-2: oklch(0.221 0.041 10.9 / .04);
+    --ph: oklch(0.50 0.04 10);
+  }
+  [data-theme="pink"] body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, oklch(0.842 0.076 4.3 / .20), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, oklch(0.633 0.119 172.2 / .14), transparent 60%),
+      linear-gradient(160deg, var(--bg), var(--bg-2));
+  }
 
-  @media (max-width: 360px) { :root { --tap: 68px; } }
+  /* 移动端：方向键和按钮最小触摸目标 44px，增大间距 */
+  @media (max-width: 400px) {
+    :root { --tap: 64px; }
+    .card { padding: 14px; }
+    .pad { gap: 8px; }
+    .mode-btn { padding: 12px; font-size: 14px; }
+    .log { height: 120px; }
+    .stat { padding: 8px 10px; }
+    .stat .v { font-size: 15px; }
+    .ota-form { gap: 8px; }
+    .ota-file-row { flex-direction: column; align-items: stretch; }
+    .ota-file-name { text-align: center; }
+  }
+  /* 非常小的屏幕：进一步压缩 */
+  @media (max-width: 320px) {
+    :root { --tap: 56px; }
+    .brand { font-size: 17px; }
+    .pad { gap: 6px; }
+  }
+  /* 横屏手机：限制最大高度，避免方向键过大 */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .pad { --tap: 56px; gap: 6px; }
+    .card { padding: 10px; }
+    .log { height: 80px; }
+  }
 </style>
 </head>
 <body>
@@ -266,7 +359,7 @@
     <section class="card" data-i18n-aria="aria_set" aria-label="设置">
       <div class="row">
         <span class="label" data-i18n="speed">速度</span>
-        <input id="spd" type="range" min="0" max="9" value="6" data-i18n-aria="aria_spd" aria-label="速度 0% 到 90%">
+        <input id="spd" type="range" min="0" max="9" value="6" step="1" data-i18n-aria="aria_spd" aria-label="速度 0% 到 90%" inputmode="numeric">
         <span class="val" id="spdv">60%</span>
       </div>
     </section>
@@ -282,7 +375,7 @@
         <div class="stat"><div class="k" data-i18n="k_bleadv">BLE 广播</div><div class="v" id="d_bleadv">—</div></div>
       </div>
       <div class="raw">
-        <input id="raw" class="text-in" data-i18n-ph="raw_ph" placeholder="发原始指令，如 F L R S 或 5" aria-label="原始指令">
+        <input id="raw" class="text-in" data-i18n-ph="raw_ph" placeholder="发原始指令，如 F L R S 或 5" aria-label="原始指令" inputmode="text" autocomplete="off">
         <button class="btn" id="rawBtn" data-i18n="send">发送</button>
       </div>
       <button id="stopBtn" class="stop-btn" data-i18n="stop_all">一键全停</button>
@@ -290,14 +383,20 @@
       <div id="log" class="log" aria-live="polite"></div>
     </section>
 
-    <section class="card ota" aria-label="固件升级">
-      <h2 data-i18n="ota_title">固件升级（OTA）</h2>
+    <section class="card ota" aria-labelledby="ota-heading">
+      <h2 id="ota-heading" data-i18n="ota_title">固件升级（OTA）</h2>
       <p class="ota-note" data-i18n="ota_note">选择编译好的固件 .bin 上传，设备将在线升级并自动重启。升级失败可用串口重刷救回。</p>
-      <div class="row" style="margin-top:12px">
-        <input id="otaFile" class="text-in ota-file" type="file" accept=".bin" aria-label="选择固件文件">
-        <button class="btn" id="otaUp" data-i18n="ota_up">上传升级</button>
+      <form id="otaForm" class="ota-form" novalidate>
+        <div class="ota-file-row">
+          <label for="otaFile" class="ota-file-label" data-i18n="ota_choose">选择固件</label>
+          <input id="otaFile" class="ota-file-input" type="file" accept=".bin" aria-label="选择固件文件">
+          <span class="ota-file-name" id="otaFileName" aria-live="polite"></span>
+        </div>
+        <button type="submit" class="btn ota-upload-btn" id="otaUp" data-i18n="ota_up" disabled>上传升级</button>
+      </form>
+      <div class="ota-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="OTA 升级进度">
+        <div class="ota-bar-in" id="otaBar"></div>
       </div>
-      <div class="ota-bar"><div class="ota-bar-in" id="otaBar"></div></div>
       <div class="ota-status" id="otaStatus" aria-live="polite"></div>
     </section>
   </main>
@@ -322,7 +421,7 @@
       k_ble:'蓝牙状态', k_bleadv:'BLE 广播',
       raw_ph:'发原始指令，如 F L R S 或 5', send:'发送', stop_all:'一键全停',
       log_title:'网页端操作日志',
-      ota_title:'固件升级（OTA）', ota_note:'选择编译好的固件 .bin 上传，设备将在线升级并自动重启。升级失败可用串口重刷救回。', ota_up:'上传升级',
+      ota_title:'固件升级（OTA）', ota_note:'选择编译好的固件 .bin 上传，设备将在线升级并自动重启。升级失败可用串口重刷救回。', ota_up:'上传升级', ota_choose:'选择固件',
       aria_dir:'方向控制', aria_set:'设置', aria_telem:'遥测',
       aria_fwd:'前进', aria_left:'左转', aria_stop:'停止', aria_right:'右转', aria_back:'后退', aria_spd:'速度 0% 到 90%',
       mode_ble:'蓝牙', mode_wifi:'WiFi', mode_off:'离线', mode_none:'未连接',
@@ -341,7 +440,7 @@
       k_ble:'Bluetooth', k_bleadv:'BLE adv',
       raw_ph:'Raw cmd, e.g. F L R S or 5', send:'Send', stop_all:'Emergency stop',
       log_title:'Web operation log',
-      ota_title:'Firmware Update', ota_note:'Pick a compiled .bin firmware to flash over-the-air. The device reboots after update. If it fails, reflash via serial.', ota_up:'Upload & Update',
+      ota_title:'Firmware Update', ota_note:'Pick a compiled .bin firmware to flash over-the-air. The device reboots after update. If it fails, reflash via serial.', ota_up:'Upload & Update', ota_choose:'Choose firmware',
       aria_dir:'Direction control', aria_set:'Settings', aria_telem:'Telemetry',
       aria_fwd:'Forward', aria_left:'Turn left', aria_stop:'Stop', aria_right:'Turn right', aria_back:'Backward', aria_spd:'Speed 0% to 90%',
       mode_ble:'BLE', mode_wifi:'WiFi', mode_off:'Offline', mode_none:'Disconnected',
@@ -363,61 +462,103 @@
     if (lang === 'en' && a && ACTION_EN[a]) return ACTION_EN[a];
     return a || '—';
   }
+  const THEME_COLORS = { dark: '#0b1020', light: '#eef2f9', pink: '#f6e3ea' };
+  const THEME_ICONS = {
+    dark: '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+    light: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>',
+    pink: '<svg viewBox="0 0 24 24"><path d="M12 21C8 17 4 13.5 4 9.6 4 7 6 5 8.6 5c1.3 0 2.6.6 3.4 1.7C12.8 5.6 14.1 5 15.4 5 18 5 20 7 20 9.6c0 3.9-4 7.4-8 11.4z"/></svg>'
+  };
+  const THEME_ORDER = ['dark', 'light', 'pink'];
   function applyTheme(){
+    if (!THEME_ORDER.includes(theme)) theme = 'dark';
     document.documentElement.setAttribute('data-theme', theme);
     const meta = document.querySelector('meta[name=theme-color]');
-    if (meta) meta.setAttribute('content', theme === 'light' ? '#eef2f9' : '#0b1020');
+    if (meta) meta.setAttribute('content', THEME_COLORS[theme]);
     const ti = $('themeIcon');
-    if (ti) ti.innerHTML = theme === 'light'
-      ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>'
-      : '<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    if (ti) ti.innerHTML = THEME_ICONS[theme];
   }
   /* ---------- 固件在线升级（OTA） ----------
-     选 .bin 文件 → 二次确认 → 以原始二进制 POST 到 /update，XHR 可显示上传进度。 */
-  const otaBar = $('otaBar'), otaStatus = $('otaStatus');
+     选 .bin 文件 → 文件名展示 → 二次确认 → 以原始二进制 POST 到 /update，
+     XHR 可显示上传进度，上传期间锁定按钮防重复提交。 */
+  const otaBar = $('otaBar'), otaStatus = $('otaStatus'), otaForm = $('otaForm');
+  const otaFileInput = $('otaFile'), otaFileName = $('otaFileName'), otaUpBtn = $('otaUp');
+  let otaUploading = false;
+
   function setOtaStatus(text, cls) {
     otaStatus.textContent = text;
     otaStatus.className = 'ota-status' + (cls ? ' ' + cls : '');
   }
+
+  /* 文件选中后显示文件名并启用上传按钮 */
+  otaFileInput.addEventListener('change', () => {
+    const f = otaFileInput.files[0];
+    if (f) {
+      otaFileName.textContent = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+      otaUpBtn.disabled = false;
+      setOtaStatus('', '');
+      otaBar.style.width = '0%';
+    } else {
+      otaFileName.textContent = '';
+      otaUpBtn.disabled = true;
+    }
+  });
+
   function doOta() {
-    const f = $('otaFile').files[0];
+    const f = otaFileInput.files[0];
     if (!f) { log('请先选择固件 .bin 文件', 'warn'); return; }
     if (!/\.bin$/i.test(f.name)) { log('只支持 .bin 固件文件', 'warn'); return; }
     const base = apiBase();
     if (!base) { log('请通过小车热点或局域网地址打开本页再升级', 'err'); return; }
+    if (otaUploading) return;   /* 防止重复提交 */
+
     const sure = (lang === 'zh')
       ? '确定上传固件并重启升级？\n请确保文件正确，升级期间小车会短暂失联。'
       : 'Upload firmware and reboot now?\nMake sure the file is correct; the car will briefly go offline.';
     if (!confirm(sure)) return;
 
-    setOtaStatus(lang === 'zh' ? '准备上传…' : 'Preparing…', '');
+    otaUploading = true;
+    otaUpBtn.disabled = true;
+    setOtaStatus(lang === 'zh' ? '准备上传…' : 'Preparing…', 'uploading');
     otaBar.style.width = '0%';
+
     const xhr = new XMLHttpRequest();
     xhr.open('POST', base + '/update');
     xhr.upload.onprogress = e => {
       if (e.lengthComputable) {
         const p = Math.round(e.loaded / e.total * 100);
         otaBar.style.width = p + '%';
-        setOtaStatus((lang === 'zh' ? '上传中 ' : 'Uploading ') + p + '%', '');
+        otaBar.parentElement.setAttribute('aria-valuenow', p);
+        setOtaStatus((lang === 'zh' ? '上传中 ' : 'Uploading ') + p + '%', 'uploading');
       }
     };
     xhr.onload = () => {
+      otaUploading = false;
       if (xhr.status === 200) {
         otaBar.style.width = '100%';
+        otaBar.parentElement.setAttribute('aria-valuenow', 100);
         setOtaStatus(lang === 'zh' ? '升级成功，设备重启中…' : 'Update OK, rebooting…', 'ok');
         log('固件上传完成，设备即将重启', 'ok');
+        otaFileInput.value = '';
+        otaFileName.textContent = '';
       } else {
         setOtaStatus((lang === 'zh' ? '升级失败 HTTP ' : 'Failed HTTP ') + xhr.status, 'err');
         log('固件升级失败：HTTP ' + xhr.status, 'err');
       }
+      otaUpBtn.disabled = false;
     };
     xhr.onerror = () => {
+      otaUploading = false;
       setOtaStatus(lang === 'zh' ? '网络错误，升级未完成' : 'Network error', 'err');
       log('OTA 网络错误', 'err');
+      otaUpBtn.disabled = false;
     };
     xhr.send(f);
   }
-  $('otaUp').addEventListener('click', doOta);
+
+  otaForm.addEventListener('submit', e => {
+    e.preventDefault();
+    doOta();
+  });
 
   const langToggle = $('langToggle'), themeToggle = $('themeToggle');
   function setOnlineTitle(on) { document.title = on ? tr('title_base') : tr('title_off'); }
@@ -604,7 +745,7 @@
     applyLang();
   });
   themeToggle.addEventListener('click', () => {
-    theme = (theme === 'light') ? 'dark' : 'light';
+    theme = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
     localStorage.setItem('car_theme', theme);
     applyTheme();
   });
