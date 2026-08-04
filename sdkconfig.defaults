@@ -8,7 +8,7 @@ CONFIG_ENABLE_BLE=y
 CONFIG_EXAMPLE_WIFI_SSID="your_ssid"
 CONFIG_EXAMPLE_WIFI_PASSWORD="your_password"
 
-# 电机 GPIO（L298N，须与 docs/接线文档.md 一致；⚠️ 18/19 是 USB D+/D+，绝对不能用）
+# 电机 GPIO（L298N，见 README 接线一节；⚠️ 18/19 是 USB D+/D+，绝对不能用）
 CONFIG_MOTOR_IN1_GPIO=1
 CONFIG_MOTOR_IN2_GPIO=3
 CONFIG_MOTOR_IN3_GPIO=4
@@ -21,6 +21,10 @@ CONFIG_ESP_CONSOLE_UART_BAUDRATE_115200=y
 
 # 看门狗超时放宽，便于调试
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=30
+
+# OTA 防变砖：新固件若首次启动崩溃/起不来，bootloader 自动回滚到上一版本
+# （配合 main.c 里 esp_ota_mark_app_valid_cancel_rollback() 标记健康）
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 
 # Bluetooth（ESP32-C3 仅 BLE）
 CONFIG_BT_ENABLED=y

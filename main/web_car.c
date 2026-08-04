@@ -7,6 +7,7 @@
 #include "esp_http_server.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lwip/sockets.h"
@@ -91,9 +92,43 @@ static esp_err_t log_handler(httpd_req_t *req)
 
 /* ---------- 固件在线升级（OTA）----------
    POST /update 直接接收原始 .bin 固件字节（不带 multipart），流式写入另一 OTA 分区，
-   写完后设置启动分区并重启。前端用 XHR 上传文件原始内容，可显示进度。 */
-#define OTA_BUF_SIZE   1024
-#define OTA_MAX_RETRY  50
+   写完后设置启动分区并重启。前端用 XHR 上传文件原始内容，可显示进度。
+
+   防变砖设计（多层校验，任一失败都不会改启动分区、不会重启）：
+   1) 大小校验：超过 OTA 分区大小直接拒绝；
+   2) 固件头校验：先收前 14 字节，要求魔数 0xE9 且 chip_id=5（ESP32-C3），
+      乱传的 txt/jpg/zip 等在写闪存前就被拒；
+   3) esp_ota_end() 对整个镜像做 CRC/校验，文件损坏/下载不完整在这里失败；
+   4) 即使写坏也只是写到「另一个」OTA 分区，配合 bootloader 自动回退
+      （CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE）下次启动会回滚到旧版本。 */
+#define OTA_BUF_SIZE    1024
+#define OTA_MAX_RETRY   50
+#define OTA_IMG_HDR_MIN 14   /* 固件头校验至少需要前 14 字节（magic + chip_id）*/
+#define OTA_IMG_MAGIC   0xE9 /* ESP 固件镜像头魔数 */
+#define OTA_IMG_CHIP_ID 5    /* ESP32-C3 芯片编号（镜像头偏移 12~13，小端）*/
+
+/* 带超时重试的接收：返回读到的字节数；0=对端关闭；<0=错误 */
+static int ota_recv(httpd_req_t *req, char *buf, int len)
+{
+    int retries = 0;
+    for (;;) {
+        int r = httpd_req_recv(req, buf, len);
+        if (r == 0) return 0;
+        if (r < 0) {
+            if (r == HTTPD_SOCK_ERR_TIMEOUT && retries++ < OTA_MAX_RETRY) continue;
+            return r;
+        }
+        return r;
+    }
+}
+
+/* 校验 ESP 镜像头：第 0 字节魔数必须 0xE9，第 12~13 字节 chip_id 必须等于 ESP32-C3 */
+static bool ota_header_ok(const uint8_t *hdr, int n)
+{
+    if (n < OTA_IMG_HDR_MIN) return false;
+    uint16_t chip = (uint16_t)(hdr[12] | ((uint16_t)hdr[13] << 8));
+    return hdr[0] == OTA_IMG_MAGIC && chip == OTA_IMG_CHIP_ID;
+}
 
 static esp_err_t update_handler(httpd_req_t *req)
 {
@@ -108,6 +143,19 @@ static esp_err_t update_handler(httpd_req_t *req)
     if (total <= 0 || total > (int)ota_part->size) {
         ESP_LOGE(TAG, "OTA 固件大小 %d 超出分区 %d", total, (int)ota_part->size);
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "firmware too large");
+        return ESP_FAIL;
+    }
+
+    /* 前置校验：先收固件头，确认是合法的 ESP32-C3 固件再动闪存 */
+    uint8_t hdr[32];
+    int h = ota_recv(req, (char *)hdr, sizeof(hdr));
+    if (h <= 0 || !ota_header_ok(hdr, h)) {
+        ESP_LOGE(TAG, "拒绝非法固件：magic=0x%02X chip_id=%u",
+                 h > 0 ? hdr[0] : 0,
+                 h >= OTA_IMG_HDR_MIN
+                     ? (unsigned)(hdr[12] | ((uint16_t)hdr[13] << 8)) : 0);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "not an ESP32-C3 firmware (需用 idf.py 编译出的 .bin)");
         return ESP_FAIL;
     }
 
@@ -126,14 +174,22 @@ static esp_err_t update_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    int received = 0, retries = 0;
+    /* 已收下的固件头作为第一段写入 */
+    int received = h;
+    err = esp_ota_write(ota_handle, hdr, (size_t)h);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_write 失败: %d", err);
+        free(buf); esp_ota_end(ota_handle);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "ota_write failed");
+        return ESP_FAIL;
+    }
+
     while (received < total) {
         int need = (int)(total - received);
         if (need > OTA_BUF_SIZE) need = OTA_BUF_SIZE;
-        int r = httpd_req_recv(req, (char *)buf, need);
+        int r = ota_recv(req, (char *)buf, need);
         if (r == 0) break;                               /* 对端关闭连接 */
         if (r < 0) {
-            if (r == HTTPD_SOCK_ERR_TIMEOUT && retries++ < OTA_MAX_RETRY) continue;
             ESP_LOGE(TAG, "OTA 接收失败: %d", r);
             free(buf); esp_ota_end(ota_handle);
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "recv failed");
@@ -157,9 +213,11 @@ static esp_err_t update_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+    /* esp_ota_end 会对整个镜像做 CRC/校验，文件被改坏/不完整都会在这里失败，
+       此时不会设置启动分区，板子继续跑当前固件 */
     err = esp_ota_end(ota_handle);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_end 失败（固件校验不通过？）: %d", err);
+        ESP_LOGE(TAG, "esp_ota_end 失败（固件校验不通过）: %d", err);
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "ota_end failed");
         return ESP_FAIL;
     }

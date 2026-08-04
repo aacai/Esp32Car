@@ -18,6 +18,7 @@
 #include "ble_car.h"
 #include "car_status.h"
 #include "car_log.h"
+#include "esp_ota_ops.h"
 
 static const char *TAG = "car_main";
 
@@ -305,6 +306,16 @@ void app_main(void)
 #endif
 
     web_car_start();
+
+    /* 标记本固件运行健康：配合 CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE，
+       若新固件在上电初始化阶段就崩溃，bootloader 会自动回滚到上一版本，避免 OTA 变砖。
+       走到这里说明核心子系统（电机/WiFi/BLE/Web）都已初始化成功，才标记有效。 */
+    esp_err_t ota_err = esp_ota_mark_app_valid_cancel_rollback();
+    if (ota_err == ESP_OK) {
+        ESP_LOGI(TAG, "固件已标记为有效，bootloader 回滚已取消");
+    } else if (ota_err != ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGW(TAG, "esp_ota_mark_app_valid_cancel_rollback 失败: %d", ota_err);
+    }
 
     ESP_LOGI(TAG, "控制指令: F前进 B后退 L左转 R右转 S停止  数字0-9设速度(0~90%%)");
 

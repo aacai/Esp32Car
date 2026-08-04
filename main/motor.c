@@ -8,7 +8,7 @@ static const char *TAG = "motor";
 /* 引脚（可由 menuconfig 覆盖）。
    注意：ESP32-C3 的 GPIO18/19 是 USB D-/D+（USB-Serial/JTAG），
    绝不可用作电机 PWM，否则会禁用 USB、导致无法烧录/调试。
-   默认按 docs/接线文档.md 使用 GPIO1/3/4/5/2/10，远离 USB 与 SPI Flash 引脚。 */
+   默认使用 GPIO1/3/4/5/2/10，远离 USB 与 SPI Flash 引脚（见 README 接线一节）。 */
 #ifndef CONFIG_MOTOR_IN1_GPIO
 #define CONFIG_MOTOR_IN1_GPIO 1
 #endif
